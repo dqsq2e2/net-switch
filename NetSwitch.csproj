@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Net Switch</AssemblyName>
+    <RootNamespace>NetAdapterSwitcher</RootNamespace>
+    <Version>1.0.0</Version>
+    <Product>Net Switch</Product>
+    <Title>Net Switch</Title>
+    <Description>Windows network adapter priority switcher</Description>
+    <ApplicationIcon>net-switch.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="net-switch.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

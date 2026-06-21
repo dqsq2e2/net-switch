@@ -33,6 +33,19 @@ jobs:
             -p:DebugType=None `
             --output .\artifacts\publish
 
+      - name: Publish Lite application
+        shell: pwsh
+        run: |
+          dotnet publish .\NetSwitch.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained false `
+            -p:PublishSingleFile=true `
+            -p:DebugType=None `
+            -p:AssemblyName=Net-Switch-Lite `
+            --output .\artifacts\lite
+          Copy-Item ".\artifacts\lite\Net-Switch-Lite.exe" ".\artifacts\Net-Switch-Lite.exe"
+
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --yes --no-progress
@@ -52,6 +65,7 @@ jobs:
           name: net-switch-windows-x64
           path: |
             artifacts/Net-Switch.exe
+            artifacts/Net-Switch-Lite.exe
             artifacts/installer/Net-Switch-Setup.exe
 
       - name: Create GitHub Release
@@ -61,4 +75,5 @@ jobs:
           generate_release_notes: true
           files: |
             artifacts/Net-Switch.exe
+            artifacts/Net-Switch-Lite.exe
             artifacts/installer/Net-Switch-Setup.exe

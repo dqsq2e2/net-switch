@@ -23,6 +23,7 @@ Net Switch 是一个轻量的 Windows 多网卡优先级切换工具，通过 Wi
 
 - `Net-Switch-Setup.exe`：安装包
 - `Net-Switch.exe`：免安装单文件版
+- `Net-Switch-Lite.exe`：轻量免安装版，需要预先安装 [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/9.0)
 
 程序需要管理员权限修改网络跃点，启动时会显示 Windows UAC 提示。
 

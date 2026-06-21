@@ -126,11 +126,12 @@ var
 begin
   RuntimeLabel := TNewStaticText.Create(WizardForm);
   RuntimeLabel.Parent := WizardForm.SelectDirPage;
-  RuntimeLabel.Left := WizardForm.SelectDirLabel.Left;
-  RuntimeLabel.Top := WizardForm.SelectDirBrowseLabel.Top + WizardForm.SelectDirBrowseLabel.Height + ScaleY(14);
-  RuntimeLabel.Width := WizardForm.SelectDirPage.ClientWidth - ScaleX(40);
+  RuntimeLabel.Left := WizardForm.DirEdit.Left;
+  RuntimeLabel.Top := WizardForm.DirEdit.Top + WizardForm.DirEdit.Height + ScaleY(14);
+  RuntimeLabel.Width := WizardForm.DirBrowseButton.Left + WizardForm.DirBrowseButton.Width - WizardForm.DirEdit.Left;
   RuntimeLabel.AutoSize := False;
   RuntimeLabel.WordWrap := True;
-  RuntimeLabel.Height := ScaleY(40);
+  RuntimeLabel.Height := ScaleY(36);
+  RuntimeLabel.Font.Color := $00A06020;
   RuntimeLabel.Caption := GetRuntimeDescription('');
 end;

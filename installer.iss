@@ -51,12 +51,14 @@ var
 function IsDotNet9DesktopInstalled: Boolean;
 var
   Versions: TArrayOfString;
+  FindRec: TFindRec;
   I: Integer;
+  RuntimePath: String;
 begin
   if not DotNetCheckCompleted then
   begin
     DotNet9DesktopInstalled := False;
-    if RegGetSubkeyNames(
+    if RegGetValueNames(
       HKLM64,
       'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App',
       Versions) then
@@ -70,6 +72,41 @@ begin
         end;
       end;
     end;
+
+    if (not DotNet9DesktopInstalled) and RegGetValueNames(
+      HKLM32,
+      'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App',
+      Versions) then
+    begin
+      for I := 0 to GetArrayLength(Versions) - 1 do
+      begin
+        if Pos('9.', Versions[I]) = 1 then
+        begin
+          DotNet9DesktopInstalled := True;
+          Break;
+        end;
+      end;
+    end;
+
+    if not DotNet9DesktopInstalled then
+    begin
+      RuntimePath := ExpandConstant('{pf64}\dotnet\shared\Microsoft.WindowsDesktop.App');
+      if FindFirst(RuntimePath + '\9.*', FindRec) then
+      begin
+        try
+          repeat
+            if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+            begin
+              DotNet9DesktopInstalled := True;
+              Break;
+            end;
+          until not FindNext(FindRec);
+        finally
+          FindClose(FindRec);
+        end;
+      end;
+    end;
+
     DotNetCheckCompleted := True;
   end;
   Result := DotNet9DesktopInstalled;

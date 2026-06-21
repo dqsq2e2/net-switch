@@ -30,6 +30,7 @@ internal sealed class MainForm : Form
         _hotkeyManager.QuickPanelRequested += ShowPopup;
 
         Text = "Net Switch";
+        Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
         Font = new Font("Microsoft YaHei UI", 9F);
         BackColor = Color.FromArgb(247, 248, 250);
         FormBorderStyle = FormBorderStyle.None;
@@ -162,7 +163,7 @@ internal sealed class MainForm : Form
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("退出", null, (_, _) => ExitApplication());
 
-        _trayIcon.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
+        _trayIcon.Icon = Icon is null ? SystemIcons.Application : (Icon)Icon.Clone();
         _trayIcon.Text = "Net Switch";
         _trayIcon.Visible = true;
         _trayIcon.ContextMenuStrip = menu;

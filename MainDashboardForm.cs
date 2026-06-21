@@ -23,6 +23,7 @@ internal sealed class MainDashboardForm : Form
         _configureHotkeys = configureHotkeys;
 
         Text = "Net Switch";
+        Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(880, 500);
         Rectangle workArea = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1280, 720);

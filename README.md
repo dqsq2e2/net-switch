@@ -19,11 +19,9 @@ Net Switch 是一个轻量的 Windows 多网卡优先级切换工具，通过 Wi
 
 ## 下载
 
-从仓库的 [Releases](https://github.com/dqsq2e2/net-switch/releases) 下载：
+从仓库的 [Releases](https://github.com/dqsq2e2/net-switch/releases) 下载最新的 `Net-Switch-Setup.exe`。
 
-- `Net-Switch-Setup.exe`：智能安装包；检测到 .NET 9 Desktop Runtime 时安装 Lite 版，否则安装自带运行环境的完整版
-- `Net-Switch.exe`：免安装单文件版
-- `Net-Switch-Lite.exe`：轻量免安装版，需要预先安装 [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/9.0)
+智能安装包检测到 .NET 9 Desktop Runtime 时安装 Lite 版，否则安装自带运行环境的完整版。
 
 程序需要管理员权限修改网络跃点，启动时会显示 Windows UAC 提示。
 
@@ -51,7 +49,7 @@ $env:APP_VERSION = "1.0.0"
 1. 构建 Windows x64 自包含单文件程序
 2. 生成 Inno Setup 安装包
 3. 创建 GitHub Release
-4. 上传安装包和免安装 EXE
+4. 仅上传最新的智能安装包
 
 例如：
 

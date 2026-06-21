@@ -41,7 +41,7 @@ Name: "startup"; Description: "开机启动 Net Switch"; GroupDescription: "附�
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "NetAdapterSwitcher"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue; Tasks: startup
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "启动 Net Switch"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "启动 Net Switch"; Verb: runas; Flags: shellexec nowait postinstall skipifsilent
 
 [Code]
 var

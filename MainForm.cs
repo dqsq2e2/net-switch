@@ -1,11 +1,12 @@
-using Microsoft.Win32;
 using System.Drawing.Drawing2D;
+using System.Diagnostics;
+using Microsoft.Win32;
 
 namespace NetAdapterSwitcher;
 
 internal sealed class MainForm : Form
 {
-    private const string StartupValueName = "NetAdapterSwitcher";
+    private const string StartupTaskName = "Net Switch Startup";
     private readonly PowerShellNetworkService _service = new();
     private readonly RouteMetricBackupStore _routeBackup = new();
     private readonly NotifyIcon _trayIcon = new();
@@ -21,9 +22,12 @@ internal sealed class MainForm : Form
     private DateTime _lastRefresh;
     private bool _allowExit;
     private bool _busy;
+    private readonly bool _startHidden;
 
-    public MainForm()
+    public MainForm(bool startHidden = false)
     {
+        _startHidden = startHidden;
+        RemoveLegacyStartupEntry();
         _hotkeySettings = HotkeySettings.Load();
         _hotkeyManager = new GlobalHotkeyManager(this);
         _hotkeyManager.MainWindowRequested += ShowDashboard;
@@ -47,7 +51,8 @@ internal sealed class MainForm : Form
         {
             Hide();
             await RefreshAdaptersAsync();
-            ShowDashboard();
+            if (!_startHidden)
+                ShowDashboard();
         };
         Deactivate += (_, _) =>
         {
@@ -460,25 +465,80 @@ internal sealed class MainForm : Form
 
     private static bool IsStartupEnabled()
     {
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "schtasks.exe"),
+            Arguments = $"/Query /TN \"{StartupTaskName}\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        });
+        process?.WaitForExit();
+        return process?.ExitCode == 0;
+    }
+
+    private static void RemoveLegacyStartupEntry()
+    {
         using RegistryKey? key = Registry.CurrentUser.OpenSubKey(
-            @"Software\Microsoft\Windows\CurrentVersion\Run");
-        return key?.GetValue(StartupValueName) is string;
+            @"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
+        key?.DeleteValue("NetAdapterSwitcher", throwOnMissingValue: false);
     }
 
     private void ToggleStartup()
     {
-        using RegistryKey key = Registry.CurrentUser.CreateSubKey(
-            @"Software\Microsoft\Windows\CurrentVersion\Run");
-        if (_startupMenuItem.Checked)
+        try
         {
-            key.DeleteValue(StartupValueName, false);
-            _startupMenuItem.Checked = false;
+            if (_startupMenuItem.Checked)
+            {
+                RunScheduledTaskCommand("/Delete", "/TN", StartupTaskName, "/F");
+                _startupMenuItem.Checked = false;
+                _trayIcon.ShowBalloonTip(1600, "开机启动", "已关闭开机启动。", ToolTipIcon.Info);
+            }
+            else
+            {
+                string action = $"\"{Application.ExecutablePath}\" --startup";
+                RunScheduledTaskCommand(
+                    "/Create", "/TN", StartupTaskName,
+                    "/TR", action,
+                    "/SC", "ONLOGON",
+                    "/RL", "HIGHEST",
+                    "/F");
+                _startupMenuItem.Checked = true;
+                _trayIcon.ShowBalloonTip(1800, "开机启动",
+                    "已创建登录计划任务，下次登录后将在托盘后台启动。",
+                    ToolTipIcon.Info);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            key.SetValue(StartupValueName, $"\"{Application.ExecutablePath}\"");
-            _startupMenuItem.Checked = true;
+            _startupMenuItem.Checked = IsStartupEnabled();
+            MessageBox.Show(_dashboard ?? (IWin32Window)this, ex.Message, "开机启动设置失败",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
+    }
+
+    private static void RunScheduledTaskCommand(params string[] arguments)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "schtasks.exe"),
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        foreach (string argument in arguments)
+            startInfo.ArgumentList.Add(argument);
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("无法启动 Windows 计划任务工具。");
+        string output = process.StandardOutput.ReadToEnd();
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(error) ? output.Trim() : error.Trim());
     }
 
     private void ConfigureHotkeys()

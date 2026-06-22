@@ -10,6 +10,8 @@ internal static class Program
             return;
 
         ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm());
+        bool startHidden = Environment.GetCommandLineArgs()
+            .Any(argument => argument.Equals("--startup", StringComparison.OrdinalIgnoreCase));
+        Application.Run(new MainForm(startHidden));
     }
 }

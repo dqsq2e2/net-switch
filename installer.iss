@@ -40,13 +40,15 @@ Name: "desktopicon"; Description: "创建桌面快捷方式"; GroupDescription: 
 Name: "startup"; Description: "开机启动 Net Switch"; GroupDescription: "附加选项："; Flags: unchecked
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "NetAdapterSwitcher"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue; Tasks: startup
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "NetAdapterSwitcher"; Flags: deletevalue uninsdeletevalue
 
 [Run]
+Filename: "{sys}\schtasks.exe"; Parameters: "/Create /TN ""Net Switch Startup"" /TR ""\""{app}\{#MyAppExeName}\"" --startup"" /SC ONLOGON /RL HIGHEST /F"; Flags: runhidden waituntilterminated; Tasks: startup
 Filename: "{app}\{#MyAppExeName}"; Description: "启动 Net Switch"; Verb: runas; Flags: shellexec nowait postinstall skipifsilent
 
 [UninstallRun]
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /T /IM ""{#MyAppExeName}"""; Flags: runhidden waituntilterminated; RunOnceId: "StopNetSwitch"
+Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""Net Switch Startup"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "DeleteNetSwitchStartupTask"
 
 [Code]
 var

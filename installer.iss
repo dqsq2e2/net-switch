@@ -28,7 +28,7 @@ CloseApplications=yes
 RestartApplications=no
 
 [Files]
-Source: "artifacts\lite\Net-Switch-Lite.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion; Check: IsDotNet9DesktopInstalled
+Source: "artifacts\lite\{#MyAppExeName}"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion; Check: IsDotNet9DesktopInstalled
 Source: "artifacts\publish\{#MyAppExeName}"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion; Check: not IsDotNet9DesktopInstalled
 
 [Icons]

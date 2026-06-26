@@ -36,12 +36,12 @@ internal sealed class MainForm : Form
         Text = "Net Switch";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
         Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = Color.FromArgb(247, 248, 250);
+        BackColor = Color.FromArgb(38, 38, 38);
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         TopMost = true;
-        ClientSize = new Size(390, 430);
+        ClientSize = new Size(448, 500);
         Padding = new Padding(1);
 
         BuildPopup();
@@ -71,39 +71,39 @@ internal sealed class MainForm : Form
         var border = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.FromArgb(210, 214, 220),
+            BackColor = Color.FromArgb(76, 76, 76),
             Padding = new Padding(1)
         };
         var content = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.FromArgb(247, 248, 250)
+            BackColor = Color.FromArgb(45, 45, 45)
         };
 
         var header = new Panel
         {
             Dock = DockStyle.Top,
-            Height = 72,
-            BackColor = Color.White,
-            Padding = new Padding(18, 13, 12, 8)
+            Height = 82,
+            BackColor = Color.FromArgb(45, 45, 45),
+            Padding = new Padding(28, 18, 18, 8)
         };
         var title = new Label
         {
             AutoSize = true,
             Text = "选择主用网络",
             Font = new Font(Font.FontFamily, 13F, FontStyle.Bold),
-            ForeColor = Color.FromArgb(30, 35, 43),
-            Location = new Point(17, 12)
+            ForeColor = Color.White,
+            Location = new Point(28, 16)
         };
         var hint = new Label
         {
             AutoSize = true,
             Text = "点击网卡立即切换 · 总跃点越小越优先",
-            ForeColor = Color.FromArgb(112, 119, 130),
-            Location = new Point(19, 42)
+            ForeColor = Color.FromArgb(205, 205, 205),
+            Location = new Point(30, 47)
         };
         var refresh = CreateIconButton("↻");
-        refresh.Location = new Point(342, 18);
+        refresh.Location = new Point(392, 21);
         refresh.Click += async (_, _) => await RefreshAdaptersAsync();
         header.Controls.AddRange([title, hint, refresh]);
 
@@ -111,29 +111,29 @@ internal sealed class MainForm : Form
         _adapterList.FlowDirection = FlowDirection.TopDown;
         _adapterList.WrapContents = false;
         _adapterList.AutoScroll = true;
-        _adapterList.Padding = new Padding(12, 12, 12, 8);
-        _adapterList.BackColor = Color.FromArgb(247, 248, 250);
+        _adapterList.Padding = new Padding(24, 8, 24, 8);
+        _adapterList.BackColor = Color.FromArgb(45, 45, 45);
 
         var footer = new Panel
         {
             Dock = DockStyle.Bottom,
-            Height = 54,
-            BackColor = Color.White,
-            Padding = new Padding(16, 9, 12, 9)
+            Height = 66,
+            BackColor = Color.FromArgb(56, 56, 56),
+            Padding = new Padding(24, 13, 24, 13)
         };
         _statusLabel.Dock = DockStyle.Fill;
         _statusLabel.Text = "后台运行中";
         _statusLabel.TextAlign = ContentAlignment.MiddleLeft;
         _statusLabel.AutoEllipsis = true;
-        _statusLabel.ForeColor = Color.FromArgb(94, 101, 112);
+        _statusLabel.ForeColor = Color.FromArgb(235, 235, 235);
         var restore = new Button
         {
             Text = "恢复自动",
             Dock = DockStyle.Right,
-            Width = 92,
+            Width = 104,
             FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(237, 240, 244),
-            ForeColor = Color.FromArgb(45, 52, 62),
+            BackColor = Color.FromArgb(72, 72, 72),
+            ForeColor = Color.White,
             Cursor = Cursors.Hand
         };
         restore.FlatAppearance.BorderSize = 0;
@@ -215,8 +215,10 @@ internal sealed class MainForm : Form
 
     private void PositionNearTaskbar()
     {
-        Rectangle area = Screen.FromPoint(Cursor.Position).WorkingArea;
-        Location = new Point(area.Right - Width - 12, area.Bottom - Height - 12);
+        Screen screen = Screen.PrimaryScreen ?? Screen.FromPoint(Cursor.Position);
+        Rectangle area = screen.WorkingArea;
+        const int margin = 18;
+        Location = new Point(area.Right - Width - margin, area.Bottom - Height - margin);
     }
 
     private async Task RefreshAdaptersAsync(bool silent = false)
@@ -278,23 +280,31 @@ internal sealed class MainForm : Form
         bool connected = adapter.IsConnected;
         var card = new Panel
         {
-            Width = 346,
-            Height = 116,
-            Margin = new Padding(0, 0, 0, 9),
+            Width = 382,
+            Height = 118,
+            Margin = new Padding(0, 0, 0, 12),
             BackColor = adapter.HasDefaultRoute
-                ? Color.FromArgb(229, 238, 255)
-                : Color.White,
+                ? Color.FromArgb(28, 93, 166)
+                : Color.FromArgb(67, 67, 67),
             Cursor = connected ? Cursors.Hand : Cursors.Default,
             Tag = adapter
+        };
+        card.Region = new Region(RoundedRectangle(new Rectangle(Point.Empty, card.Size), 8));
+        card.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            using var path = RoundedRectangle(card.ClientRectangle, 8);
+            using var brush = new SolidBrush(card.BackColor);
+            e.Graphics.FillPath(brush, path);
         };
 
         var icon = new Label
         {
             Text = adapter.NetworkType == "WLAN" ? "◉" : "▣",
             Font = new Font("Segoe UI Symbol", 17F),
-            ForeColor = connected ? Color.FromArgb(42, 103, 225) : Color.FromArgb(150, 156, 166),
+            ForeColor = connected ? Color.White : Color.FromArgb(170, 170, 170),
             TextAlign = ContentAlignment.MiddleCenter,
-            Location = new Point(12, 31),
+            Location = new Point(14, 34),
             Size = new Size(38, 42)
         };
         var name = new Label
@@ -302,34 +312,34 @@ internal sealed class MainForm : Form
             Text = adapter.Name,
             AutoEllipsis = true,
             Font = new Font(Font, FontStyle.Bold),
-            ForeColor = Color.FromArgb(31, 37, 46),
-            Location = new Point(56, 13),
-            Size = new Size(215, 23)
+            ForeColor = Color.White,
+            Location = new Point(62, 14),
+            Size = new Size(240, 23)
         };
         var details = new Label
         {
             Text = connected ? $"IP：{EmptyAsDash(adapter.IpAddress)}" : "未连接",
             AutoEllipsis = true,
-            ForeColor = connected ? Color.FromArgb(87, 96, 109) : Color.FromArgb(151, 157, 166),
-            Location = new Point(56, 40),
-            Size = new Size(275, 21)
+            ForeColor = connected ? Color.FromArgb(232, 232, 232) : Color.FromArgb(185, 185, 185),
+            Location = new Point(62, 40),
+            Size = new Size(292, 21)
         };
         var gateway = new Label
         {
             Text = $"网关：{EmptyAsDash(adapter.Gateway)}",
             AutoSize = false,
             AutoEllipsis = false,
-            ForeColor = Color.FromArgb(87, 96, 109),
-            Location = new Point(56, 62),
-            Size = new Size(278, 21)
+            ForeColor = Color.FromArgb(215, 215, 215),
+            Location = new Point(62, 62),
+            Size = new Size(292, 21)
         };
         var speed = new Label
         {
             Text = $"速率：{EmptyAsDash(adapter.LinkSpeed)}",
             AutoSize = false,
-            ForeColor = Color.FromArgb(87, 96, 109),
-            Location = new Point(190, 88),
-            Size = new Size(144, 21),
+            ForeColor = Color.FromArgb(215, 215, 215),
+            Location = new Point(224, 88),
+            Size = new Size(130, 21),
             TextAlign = ContentAlignment.TopRight
         };
         var metric = new Label
@@ -337,24 +347,37 @@ internal sealed class MainForm : Form
             Text = adapter.HasDefaultRoute ? $"总跃点 {adapter.EffectiveMetric}" : "无默认路由",
             AutoSize = true,
             ForeColor = adapter.HasDefaultRoute
-                ? Color.FromArgb(35, 92, 205)
-                : Color.FromArgb(135, 141, 151),
-            Location = new Point(56, 88)
+                ? Color.White
+                : Color.FromArgb(190, 190, 190),
+            Location = new Point(62, 88)
         };
         var active = new Label
         {
             Text = adapter.HasDefaultRoute && adapter.EffectiveMetric <= 5 ? "当前" : "›",
             Font = new Font(Font, FontStyle.Bold),
-            ForeColor = Color.FromArgb(42, 103, 225),
+            ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleRight,
-            Location = new Point(277, 13),
-            Size = new Size(54, 25)
+            Location = new Point(314, 14),
+            Size = new Size(48, 25)
         };
 
         card.Controls.AddRange([icon, name, details, gateway, metric, speed, active]);
         if (connected)
             AttachClick(card, async () => await SetPreferredAsync(adapter));
         return card;
+    }
+
+    private static GraphicsPath RoundedRectangle(Rectangle bounds, int radius)
+    {
+        var path = new GraphicsPath();
+        int diameter = radius * 2;
+        Rectangle r = new(bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
+        path.AddArc(r.Left, r.Top, diameter, diameter, 180, 90);
+        path.AddArc(r.Right - diameter, r.Top, diameter, diameter, 270, 90);
+        path.AddArc(r.Right - diameter, r.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(r.Left, r.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     private static void AttachClick(Control control, Func<Task> action)
@@ -455,10 +478,11 @@ internal sealed class MainForm : Form
             Size = new Size(34, 34),
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.FromArgb(241, 243, 246),
-            ForeColor = Color.FromArgb(55, 63, 74),
+            ForeColor = Color.White,
             Font = new Font("Segoe UI Symbol", 13F),
             Cursor = Cursors.Hand
         };
+        button.BackColor = Color.FromArgb(62, 62, 62);
         button.FlatAppearance.BorderSize = 0;
         return button;
     }
@@ -620,14 +644,7 @@ internal sealed class MainForm : Form
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        using var path = new GraphicsPath();
-        const int radius = 14;
-        Rectangle r = ClientRectangle;
-        path.AddArc(r.Left, r.Top, radius, radius, 180, 90);
-        path.AddArc(r.Right - radius, r.Top, radius, radius, 270, 90);
-        path.AddArc(r.Right - radius, r.Bottom - radius, radius, radius, 0, 90);
-        path.AddArc(r.Left, r.Bottom - radius, radius, radius, 90, 90);
-        path.CloseFigure();
+        using var path = RoundedRectangle(ClientRectangle, 10);
         Region = new Region(path);
     }
 

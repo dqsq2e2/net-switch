@@ -10,7 +10,7 @@ internal sealed class MainForm : Form
     private readonly PowerShellNetworkService _service = new();
     private readonly RouteMetricBackupStore _routeBackup = new();
     private readonly NotifyIcon _trayIcon = new();
-    private readonly FlowLayoutPanel _adapterList = new();
+    private readonly TableLayoutPanel _adapterTiles = new();
     private readonly Label _statusLabel = new();
     private readonly ProgressBar _progress = new();
     private readonly ToolStripMenuItem _startupMenuItem = new("开机启动");
@@ -41,7 +41,7 @@ internal sealed class MainForm : Form
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         TopMost = true;
-        ClientSize = new Size(448, 500);
+        ClientSize = new Size(448, 390);
         Padding = new Padding(1);
 
         BuildPopup();
@@ -107,12 +107,16 @@ internal sealed class MainForm : Form
         refresh.Click += async (_, _) => await RefreshAdaptersAsync();
         header.Controls.AddRange([title, hint, refresh]);
 
-        _adapterList.Dock = DockStyle.Fill;
-        _adapterList.FlowDirection = FlowDirection.TopDown;
-        _adapterList.WrapContents = false;
-        _adapterList.AutoScroll = true;
-        _adapterList.Padding = new Padding(24, 8, 24, 8);
-        _adapterList.BackColor = Color.FromArgb(45, 45, 45);
+        _adapterTiles.Dock = DockStyle.Fill;
+        _adapterTiles.ColumnCount = 2;
+        _adapterTiles.RowCount = 2;
+        _adapterTiles.Padding = new Padding(24, 8, 24, 8);
+        _adapterTiles.BackColor = Color.FromArgb(45, 45, 45);
+        _adapterTiles.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        _adapterTiles.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        _adapterTiles.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
+        _adapterTiles.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
+        _adapterTiles.GrowStyle = TableLayoutPanelGrowStyle.FixedSize;
 
         var footer = new Panel
         {
@@ -146,7 +150,7 @@ internal sealed class MainForm : Form
         footer.Controls.Add(restore);
         footer.Controls.Add(_progress);
 
-        content.Controls.Add(_adapterList);
+        content.Controls.Add(_adapterTiles);
         content.Controls.Add(footer);
         content.Controls.Add(header);
         border.Controls.Add(content);
@@ -215,9 +219,9 @@ internal sealed class MainForm : Form
 
     private void PositionNearTaskbar()
     {
-        Screen screen = Screen.PrimaryScreen ?? Screen.FromPoint(Cursor.Position);
+        Screen screen = Screen.FromPoint(Cursor.Position);
         Rectangle area = screen.WorkingArea;
-        const int margin = 18;
+        const int margin = 12;
         Location = new Point(area.Right - Width - margin, area.Bottom - Height - margin);
     }
 
@@ -267,22 +271,41 @@ internal sealed class MainForm : Form
 
     private void RenderAdapters(IReadOnlyList<NetworkAdapterInfo> adapters)
     {
-        _adapterList.SuspendLayout();
-        _adapterList.Controls.Clear();
-        foreach (var adapter in adapters)
-            _adapterList.Controls.Add(CreateAdapterCard(adapter));
-        _adapterList.ResumeLayout();
+        _adapterTiles.SuspendLayout();
+        _adapterTiles.Controls.Clear();
+        int index = 0;
+        foreach (var adapter in adapters.Take(4))
+        {
+            var tile = CreateAdapterCard(adapter);
+            _adapterTiles.Controls.Add(tile, index % 2, index / 2);
+            index++;
+        }
+        while (index < 4)
+        {
+            _adapterTiles.Controls.Add(CreatePlaceholderTile(), index % 2, index / 2);
+            index++;
+        }
+        _adapterTiles.ResumeLayout();
         _dashboard?.UpdateAdapters(adapters, CacheStatusText());
     }
+
+    private static Control CreatePlaceholderTile() =>
+        new Panel
+        {
+            Dock = DockStyle.Fill,
+            Margin = new Padding(6),
+            BackColor = Color.FromArgb(57, 57, 57),
+            Region = new Region(RoundedRectangle(new Rectangle(0, 0, 180, 84), 8))
+        };
 
     private Control CreateAdapterCard(NetworkAdapterInfo adapter)
     {
         bool connected = adapter.IsConnected;
         var card = new Panel
         {
-            Width = 382,
-            Height = 118,
-            Margin = new Padding(0, 0, 0, 12),
+            Dock = DockStyle.Fill,
+            Height = 88,
+            Margin = new Padding(6, 6, 6, 6),
             BackColor = adapter.HasDefaultRoute
                 ? Color.FromArgb(28, 93, 166)
                 : Color.FromArgb(67, 67, 67),
@@ -300,12 +323,12 @@ internal sealed class MainForm : Form
 
         var icon = new Label
         {
-            Text = adapter.NetworkType == "WLAN" ? "◉" : "▣",
-            Font = new Font("Segoe UI Symbol", 17F),
+            Text = adapter.NetworkType == "WLAN" ? "⌁" : "▣",
+            Font = new Font("Segoe UI Symbol", 16F),
             ForeColor = connected ? Color.White : Color.FromArgb(170, 170, 170),
             TextAlign = ContentAlignment.MiddleCenter,
-            Location = new Point(14, 34),
-            Size = new Size(38, 42)
+            Location = new Point(12, 18),
+            Size = new Size(34, 36)
         };
         var name = new Label
         {
@@ -313,43 +336,25 @@ internal sealed class MainForm : Form
             AutoEllipsis = true,
             Font = new Font(Font, FontStyle.Bold),
             ForeColor = Color.White,
-            Location = new Point(62, 14),
-            Size = new Size(240, 23)
+            Location = new Point(52, 15),
+            Size = new Size(110, 22)
         };
         var details = new Label
         {
-            Text = connected ? $"IP：{EmptyAsDash(adapter.IpAddress)}" : "未连接",
+            Text = connected ? EmptyAsDash(adapter.LinkSpeed) : "未连接",
             AutoEllipsis = true,
             ForeColor = connected ? Color.FromArgb(232, 232, 232) : Color.FromArgb(185, 185, 185),
-            Location = new Point(62, 40),
-            Size = new Size(292, 21)
-        };
-        var gateway = new Label
-        {
-            Text = $"网关：{EmptyAsDash(adapter.Gateway)}",
-            AutoSize = false,
-            AutoEllipsis = false,
-            ForeColor = Color.FromArgb(215, 215, 215),
-            Location = new Point(62, 62),
-            Size = new Size(292, 21)
-        };
-        var speed = new Label
-        {
-            Text = $"速率：{EmptyAsDash(adapter.LinkSpeed)}",
-            AutoSize = false,
-            ForeColor = Color.FromArgb(215, 215, 215),
-            Location = new Point(224, 88),
-            Size = new Size(130, 21),
-            TextAlign = ContentAlignment.TopRight
+            Location = new Point(52, 40),
+            Size = new Size(110, 21)
         };
         var metric = new Label
         {
-            Text = adapter.HasDefaultRoute ? $"总跃点 {adapter.EffectiveMetric}" : "无默认路由",
+            Text = adapter.HasDefaultRoute ? $"跃点 {adapter.EffectiveMetric}" : "无默认路由",
             AutoSize = true,
             ForeColor = adapter.HasDefaultRoute
                 ? Color.White
                 : Color.FromArgb(190, 190, 190),
-            Location = new Point(62, 88)
+            Location = new Point(52, 62)
         };
         var active = new Label
         {
@@ -357,11 +362,12 @@ internal sealed class MainForm : Form
             Font = new Font(Font, FontStyle.Bold),
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleRight,
-            Location = new Point(314, 14),
-            Size = new Size(48, 25)
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+            Location = new Point(134, 13),
+            Size = new Size(36, 24)
         };
 
-        card.Controls.AddRange([icon, name, details, gateway, metric, speed, active]);
+        card.Controls.AddRange([icon, name, details, metric, active]);
         if (connected)
             AttachClick(card, async () => await SetPreferredAsync(adapter));
         return card;

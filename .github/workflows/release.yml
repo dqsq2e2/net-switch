@@ -42,9 +42,8 @@ jobs:
             --self-contained false `
             -p:PublishSingleFile=true `
             -p:DebugType=None `
-            -p:AssemblyName=Net-Switch-Lite `
             --output .\artifacts\lite
-          Copy-Item ".\artifacts\lite\Net-Switch-Lite.exe" ".\artifacts\Net-Switch-Lite.exe"
+          Copy-Item ".\artifacts\lite\Net Switch.exe" ".\artifacts\Net-Switch-Lite.exe"
 
       - name: Install Inno Setup
         shell: pwsh

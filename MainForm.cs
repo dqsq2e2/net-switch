@@ -178,11 +178,6 @@ internal sealed class MainForm : Form
             if (e.Button == MouseButtons.Left)
                 ShowPopup();
         };
-        _trayIcon.MouseDoubleClick += (_, e) =>
-        {
-            if (e.Button == MouseButtons.Left)
-                ShowDashboard();
-        };
     }
 
     private void ShowPopup()

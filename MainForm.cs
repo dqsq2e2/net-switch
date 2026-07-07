@@ -161,6 +161,7 @@ internal sealed class MainForm : Form
         menu.Items.Add("刷新", null, async (_, _) => await RefreshAdaptersAsync());
         menu.Items.Add("恢复全部自动跃点", null, async (_, _) => await RestoreAllAsync());
         menu.Items.Add("设置全局快捷键…", null, (_, _) => ConfigureHotkeys());
+        menu.Items.Add("打开托盘图标设置…", null, (_, _) => OpenTaskbarSettings());
         menu.Items.Add(new ToolStripSeparator());
         _startupMenuItem.Checked = IsStartupEnabled();
         _startupMenuItem.Click += (_, _) => ToggleStartup();
@@ -596,6 +597,15 @@ internal sealed class MainForm : Form
             MessageBox.Show(owner, ex.Message, "快捷键设置失败",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
+    }
+
+    private static void OpenTaskbarSettings()
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "ms-settings:taskbar",
+            UseShellExecute = true
+        });
     }
 
     private void RegisterHotkeys(bool showError)

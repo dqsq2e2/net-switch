@@ -9,6 +9,12 @@ internal sealed class MainDashboardForm : Form
     private readonly Func<Task> _restore;
     private readonly Action _configureHotkeys;
     private readonly Label _hotkeyHint = new();
+    private readonly Panel _header = new();
+    private readonly Label _title = new();
+    private readonly Label _subtitle = new();
+    private readonly FlowLayoutPanel _toolbar = new();
+    private readonly Panel _gridHost = new();
+    private readonly List<Button> _buttons = [];
     private List<NetworkAdapterInfo> _adapters = [];
 
     public MainDashboardForm(
@@ -31,9 +37,9 @@ internal sealed class MainDashboardForm : Form
             Math.Min(1240, workArea.Width - 80),
             Math.Min(680, workArea.Height - 80));
         Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = Color.FromArgb(245, 247, 250);
 
         BuildLayout();
+        ApplyTheme();
         FormClosing += (_, e) =>
         {
             e.Cancel = true;
@@ -54,40 +60,27 @@ internal sealed class MainDashboardForm : Form
 
     private void BuildLayout()
     {
-        var header = new Panel
-        {
-            Dock = DockStyle.Top,
-            Height = 92,
-            BackColor = Color.FromArgb(28, 39, 56),
-            Padding = new Padding(26, 15, 20, 10)
-        };
-        header.Controls.Add(new Label
-        {
-            Text = "Net Switch",
-            AutoSize = true,
-            ForeColor = Color.White,
-            Font = new Font(Font.FontFamily, 17F, FontStyle.Bold),
-            Location = new Point(25, 14)
-        });
-        header.Controls.Add(new Label
-        {
-            Text = "选择物理以太网或 WLAN，自动调整默认路由优先级",
-            AutoSize = true,
-            ForeColor = Color.FromArgb(188, 199, 214),
-            Location = new Point(27, 55)
-        });
+        _header.Dock = DockStyle.Top;
+        _header.Height = 92;
+        _header.Padding = new Padding(26, 15, 20, 10);
+        _title.Text = "Net Switch";
+        _title.AutoSize = true;
+        _title.ForeColor = Color.White;
+        _title.Font = new Font(Font.FontFamily, 17F, FontStyle.Bold);
+        _title.Location = new Point(25, 14);
+        _subtitle.Text = "选择物理以太网或 WLAN，自动调整默认路由优先级";
+        _subtitle.AutoSize = true;
+        _subtitle.Location = new Point(27, 55);
+        _header.Controls.AddRange([_title, _subtitle]);
 
-        var toolbar = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            Height = 62,
-            Padding = new Padding(20, 13, 10, 8),
-            BackColor = Color.White
-        };
+        _toolbar.Dock = DockStyle.Top;
+        _toolbar.Height = 62;
+        _toolbar.Padding = new Padding(20, 13, 10, 8);
         var switchButton = MakeButton("设为主用", true, 110);
         var refreshButton = MakeButton("刷新", false, 82);
         var restoreButton = MakeButton("恢复自动跃点", false, 130);
         var hotkeyButton = MakeButton("设置快捷键", false, 112);
+        _buttons.AddRange([switchButton, refreshButton, restoreButton, hotkeyButton]);
         switchButton.Click += async (_, _) =>
         {
             if (_grid.CurrentRow?.DataBoundItem is NetworkAdapterInfo adapter)
@@ -97,29 +90,23 @@ internal sealed class MainDashboardForm : Form
         restoreButton.Click += async (_, _) => await _restore();
         hotkeyButton.Click += (_, _) => _configureHotkeys();
         _hotkeyHint.AutoSize = true;
-        _hotkeyHint.ForeColor = Color.FromArgb(100, 108, 120);
         _hotkeyHint.Margin = new Padding(10, 9, 0, 0);
-        toolbar.Controls.AddRange([switchButton, refreshButton, restoreButton, hotkeyButton, _hotkeyHint]);
+        _toolbar.Controls.AddRange([switchButton, refreshButton, restoreButton, hotkeyButton, _hotkeyHint]);
 
         ConfigureGrid();
-        var gridHost = new Panel
-        {
-            Dock = DockStyle.Fill,
-            Padding = new Padding(20, 16, 20, 12)
-        };
-        gridHost.Controls.Add(_grid);
+        _gridHost.Dock = DockStyle.Fill;
+        _gridHost.Padding = new Padding(20, 16, 20, 12);
+        _gridHost.Controls.Add(_grid);
 
         _status.Dock = DockStyle.Bottom;
         _status.Height = 40;
         _status.Padding = new Padding(22, 0, 0, 0);
         _status.TextAlign = ContentAlignment.MiddleLeft;
-        _status.BackColor = Color.White;
-        _status.ForeColor = Color.FromArgb(85, 94, 108);
 
-        Controls.Add(gridHost);
+        Controls.Add(_gridHost);
         Controls.Add(_status);
-        Controls.Add(toolbar);
-        Controls.Add(header);
+        Controls.Add(_toolbar);
+        Controls.Add(_header);
     }
 
     private void ConfigureGrid()
@@ -140,10 +127,7 @@ internal sealed class MainDashboardForm : Form
         _grid.RowTemplate.Height = 48;
         _grid.ColumnHeadersHeight = 42;
         _grid.EnableHeadersVisualStyles = false;
-        _grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(247, 249, 251);
         _grid.ColumnHeadersDefaultCellStyle.Font = new Font(Font, FontStyle.Bold);
-        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(226, 237, 255);
-        _grid.DefaultCellStyle.SelectionForeColor = Color.FromArgb(28, 42, 65);
 
         AddColumn("Name", "网卡", 130);
         AddColumn("StatusText", "状态", 70);
@@ -190,5 +174,39 @@ internal sealed class MainDashboardForm : Form
         };
         button.FlatAppearance.BorderSize = 0;
         return button;
+    }
+
+    public void ApplyTheme()
+    {
+        AppTheme theme = ThemeService.Current;
+        BackColor = theme.Window;
+        _header.BackColor = theme.IsDark ? theme.PanelAlt : Color.FromArgb(28, 39, 56);
+        _title.ForeColor = Color.White;
+        _subtitle.ForeColor = theme.IsDark ? theme.SubText : Color.FromArgb(188, 199, 214);
+        _toolbar.BackColor = theme.Panel;
+        _gridHost.BackColor = theme.Window;
+        _status.BackColor = theme.Panel;
+        _status.ForeColor = theme.SubText;
+        _hotkeyHint.ForeColor = theme.SubText;
+
+        foreach (Button button in _buttons)
+        {
+            bool primary = button.Text == "设为主用";
+            button.BackColor = primary ? Color.FromArgb(38, 99, 235) : theme.Button;
+            button.ForeColor = primary ? Color.White : theme.ButtonText;
+        }
+
+        _grid.BackgroundColor = theme.Grid;
+        _grid.GridColor = theme.IsDark ? Color.FromArgb(65, 65, 65) : Color.FromArgb(229, 233, 239);
+        _grid.ColumnHeadersDefaultCellStyle.BackColor = theme.GridHeader;
+        _grid.ColumnHeadersDefaultCellStyle.ForeColor = theme.Text;
+        _grid.DefaultCellStyle.BackColor = theme.Grid;
+        _grid.DefaultCellStyle.ForeColor = theme.Text;
+        _grid.DefaultCellStyle.SelectionBackColor = theme.Selection;
+        _grid.DefaultCellStyle.SelectionForeColor = theme.PrimaryText;
+        _grid.AlternatingRowsDefaultCellStyle.BackColor = theme.IsDark
+            ? Color.FromArgb(40, 40, 40)
+            : Color.White;
+        _grid.EnableHeadersVisualStyles = false;
     }
 }

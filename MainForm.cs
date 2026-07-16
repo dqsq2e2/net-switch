@@ -13,6 +13,14 @@ internal sealed class MainForm : Form
     private readonly FlowLayoutPanel _adapterList = new();
     private readonly Label _statusLabel = new();
     private readonly ProgressBar _progress = new();
+    private readonly Panel _popupBorder = new();
+    private readonly Panel _popupContent = new();
+    private readonly Panel _popupHeader = new();
+    private readonly Panel _popupFooter = new();
+    private readonly Label _popupTitle = new();
+    private readonly Label _popupHint = new();
+    private Button? _refreshButton;
+    private Button? _restoreButton;
     private readonly ToolStripMenuItem _startupMenuItem = new("开机启动");
     private readonly System.Windows.Forms.Timer _backgroundRefreshTimer = new();
     private readonly HotkeySettings _hotkeySettings;
@@ -36,7 +44,6 @@ internal sealed class MainForm : Form
         Text = "Net Switch";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
         Font = new Font("Microsoft YaHei UI", 9F);
-        BackColor = Color.FromArgb(38, 38, 38);
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
@@ -45,6 +52,7 @@ internal sealed class MainForm : Form
         Padding = new Padding(1);
 
         BuildPopup();
+        ApplyTheme();
         BuildTrayIcon();
 
         Shown += async (_, _) =>
@@ -60,6 +68,7 @@ internal sealed class MainForm : Form
         };
         FormClosing += OnFormClosing;
         HandleCreated += (_, _) => RegisterHotkeys(showError: true);
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
         _backgroundRefreshTimer.Interval = 5 * 60_000;
         _backgroundRefreshTimer.Tick += async (_, _) => await RefreshAdaptersAsync(true);
@@ -68,89 +77,63 @@ internal sealed class MainForm : Form
 
     private void BuildPopup()
     {
-        var border = new Panel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = Color.FromArgb(76, 76, 76),
-            Padding = new Padding(1)
-        };
-        var content = new Panel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = Color.FromArgb(45, 45, 45)
-        };
+        _popupBorder.Dock = DockStyle.Fill;
+        _popupBorder.Padding = new Padding(1);
+        _popupContent.Dock = DockStyle.Fill;
 
-        var header = new Panel
-        {
-            Dock = DockStyle.Top,
-            Height = 82,
-            BackColor = Color.FromArgb(45, 45, 45),
-            Padding = new Padding(28, 18, 18, 8)
-        };
-        var title = new Label
-        {
-            AutoSize = true,
-            Text = "选择主用网络",
-            Font = new Font(Font.FontFamily, 13F, FontStyle.Bold),
-            ForeColor = Color.White,
-            Location = new Point(28, 16)
-        };
-        var hint = new Label
-        {
-            AutoSize = true,
-            Text = "点击网卡立即切换 · 总跃点越小越优先",
-            ForeColor = Color.FromArgb(205, 205, 205),
-            Location = new Point(30, 47)
-        };
+        _popupHeader.Dock = DockStyle.Top;
+        _popupHeader.Height = 82;
+        _popupHeader.Padding = new Padding(28, 18, 18, 8);
+        _popupTitle.AutoSize = true;
+        _popupTitle.Text = "选择主用网络";
+        _popupTitle.Font = new Font(Font.FontFamily, 13F, FontStyle.Bold);
+        _popupTitle.Location = new Point(28, 16);
+        _popupHint.AutoSize = true;
+        _popupHint.Text = "点击网卡立即切换 · 总跃点越小越优先";
+        _popupHint.Location = new Point(30, 47);
         var refresh = CreateIconButton("↻");
+        _refreshButton = refresh;
         refresh.Location = new Point(392, 21);
         refresh.Click += async (_, _) => await RefreshAdaptersAsync();
-        header.Controls.AddRange([title, hint, refresh]);
+        _popupHeader.Controls.AddRange([_popupTitle, _popupHint, refresh]);
 
         _adapterList.Dock = DockStyle.Fill;
         _adapterList.FlowDirection = FlowDirection.TopDown;
         _adapterList.WrapContents = false;
         _adapterList.AutoScroll = false;
         _adapterList.Padding = new Padding(24, 8, 24, 8);
-        _adapterList.BackColor = Color.FromArgb(45, 45, 45);
 
-        var footer = new Panel
-        {
-            Dock = DockStyle.Bottom,
-            Height = 66,
-            BackColor = Color.FromArgb(56, 56, 56),
-            Padding = new Padding(24, 13, 24, 13)
-        };
+        _popupFooter.Dock = DockStyle.Bottom;
+        _popupFooter.Height = 66;
+        _popupFooter.Padding = new Padding(24, 13, 24, 13);
         _statusLabel.Dock = DockStyle.Fill;
         _statusLabel.Text = "后台运行中";
         _statusLabel.TextAlign = ContentAlignment.MiddleLeft;
         _statusLabel.AutoEllipsis = true;
-        _statusLabel.ForeColor = Color.FromArgb(235, 235, 235);
         var restore = new Button
         {
             Text = "恢复自动",
             Dock = DockStyle.Right,
             Width = 104,
             FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(72, 72, 72),
-            ForeColor = Color.White,
             Cursor = Cursors.Hand
         };
+        _restoreButton = restore;
         restore.FlatAppearance.BorderSize = 0;
         restore.Click += async (_, _) => await RestoreAllAsync();
         _progress.Dock = DockStyle.Bottom;
         _progress.Height = 3;
         _progress.Style = ProgressBarStyle.Marquee;
         _progress.Visible = false;
-        footer.Controls.Add(_statusLabel);
-        footer.Controls.Add(restore);
-        footer.Controls.Add(_progress);
+        _popupFooter.Controls.Add(_statusLabel);
+        _popupFooter.Controls.Add(restore);
+        _popupFooter.Controls.Add(_progress);
 
-        content.Controls.Add(_adapterList);
-        content.Controls.Add(footer);
-        content.Controls.Add(header);
-        border.Controls.Add(content);
-        Controls.Add(border);
+        _popupContent.Controls.Add(_adapterList);
+        _popupContent.Controls.Add(_popupFooter);
+        _popupContent.Controls.Add(_popupHeader);
+        _popupBorder.Controls.Add(_popupContent);
+        Controls.Add(_popupBorder);
     }
 
     private void BuildTrayIcon()
@@ -273,6 +256,7 @@ internal sealed class MainForm : Form
 
     private Control CreateAdapterCard(NetworkAdapterInfo adapter)
     {
+        AppTheme theme = ThemeService.Current;
         bool connected = adapter.IsConnected;
         var card = new Panel
         {
@@ -280,8 +264,8 @@ internal sealed class MainForm : Form
             Height = 112,
             Margin = new Padding(0, 0, 0, 10),
             BackColor = adapter.HasDefaultRoute
-                ? Color.FromArgb(28, 93, 166)
-                : Color.FromArgb(67, 67, 67),
+                ? theme.Primary
+                : theme.Card,
             Cursor = connected ? Cursors.Hand : Cursors.Default,
             Tag = adapter
         };
@@ -298,7 +282,7 @@ internal sealed class MainForm : Form
         {
             Text = adapter.NetworkType == "WLAN" ? "◉" : "▣",
             Font = new Font("Segoe UI Symbol", 17F),
-            ForeColor = connected ? Color.White : Color.FromArgb(170, 170, 170),
+            ForeColor = connected ? theme.PrimaryText : theme.InactiveText,
             TextAlign = ContentAlignment.MiddleCenter,
             Location = new Point(14, 32),
             Size = new Size(38, 42)
@@ -308,7 +292,7 @@ internal sealed class MainForm : Form
             Text = adapter.Name,
             AutoEllipsis = true,
             Font = new Font(Font, FontStyle.Bold),
-            ForeColor = Color.White,
+            ForeColor = adapter.HasDefaultRoute ? theme.PrimaryText : theme.CardText,
             Location = new Point(62, 12),
             Size = new Size(235, 22)
         };
@@ -316,7 +300,7 @@ internal sealed class MainForm : Form
         {
             Text = connected ? $"IP：{EmptyAsDash(adapter.IpAddress)}" : "未连接",
             AutoEllipsis = true,
-            ForeColor = connected ? Color.FromArgb(232, 232, 232) : Color.FromArgb(185, 185, 185),
+            ForeColor = connected ? (adapter.HasDefaultRoute ? theme.PrimaryText : theme.CardSubText) : theme.InactiveText,
             Location = new Point(62, 37),
             Size = new Size(290, 21)
         };
@@ -325,7 +309,7 @@ internal sealed class MainForm : Form
             Text = $"网关：{EmptyAsDash(adapter.Gateway)}",
             AutoSize = false,
             AutoEllipsis = false,
-            ForeColor = Color.FromArgb(215, 215, 215),
+            ForeColor = adapter.HasDefaultRoute ? theme.PrimaryText : theme.CardSubText,
             Location = new Point(62, 58),
             Size = new Size(290, 21)
         };
@@ -333,7 +317,7 @@ internal sealed class MainForm : Form
         {
             Text = $"速率：{EmptyAsDash(adapter.LinkSpeed)}",
             AutoSize = false,
-            ForeColor = Color.FromArgb(215, 215, 215),
+            ForeColor = adapter.HasDefaultRoute ? theme.PrimaryText : theme.CardSubText,
             Location = new Point(222, 84),
             Size = new Size(130, 21),
             TextAlign = ContentAlignment.TopRight
@@ -343,15 +327,15 @@ internal sealed class MainForm : Form
             Text = adapter.HasDefaultRoute ? $"总跃点 {adapter.EffectiveMetric}" : "无默认路由",
             AutoSize = true,
             ForeColor = adapter.HasDefaultRoute
-                ? Color.White
-                : Color.FromArgb(190, 190, 190),
+                ? theme.PrimaryText
+                : theme.InactiveText,
             Location = new Point(62, 84)
         };
         var active = new Label
         {
             Text = adapter.HasDefaultRoute && adapter.EffectiveMetric <= 5 ? "当前" : "›",
             Font = new Font(Font, FontStyle.Bold),
-            ForeColor = Color.White,
+            ForeColor = adapter.HasDefaultRoute ? theme.PrimaryText : theme.CardText,
             TextAlign = ContentAlignment.MiddleRight,
             Location = new Point(312, 12),
             Size = new Size(48, 24)
@@ -468,19 +452,51 @@ internal sealed class MainForm : Form
 
     private static Button CreateIconButton(string text)
     {
+        AppTheme theme = ThemeService.Current;
         var button = new Button
         {
             Text = text,
             Size = new Size(34, 34),
             FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(241, 243, 246),
-            ForeColor = Color.White,
+            BackColor = theme.Button,
+            ForeColor = theme.ButtonText,
             Font = new Font("Segoe UI Symbol", 13F),
             Cursor = Cursors.Hand
         };
-        button.BackColor = Color.FromArgb(62, 62, 62);
         button.FlatAppearance.BorderSize = 0;
         return button;
+    }
+
+    private void ApplyTheme()
+    {
+        AppTheme theme = ThemeService.Current;
+        BackColor = theme.Window;
+        _popupBorder.BackColor = theme.Border;
+        _popupContent.BackColor = theme.Panel;
+        _popupHeader.BackColor = theme.Panel;
+        _popupFooter.BackColor = theme.PanelAlt;
+        _adapterList.BackColor = theme.Panel;
+        _popupTitle.ForeColor = theme.Text;
+        _popupHint.ForeColor = theme.SubText;
+        _statusLabel.ForeColor = theme.Text;
+        if (_refreshButton is not null)
+        {
+            _refreshButton.BackColor = theme.Button;
+            _refreshButton.ForeColor = theme.ButtonText;
+        }
+        if (_restoreButton is not null)
+        {
+            _restoreButton.BackColor = theme.Button;
+            _restoreButton.ForeColor = theme.ButtonText;
+        }
+        RenderAdapters(_cachedAdapters);
+        _dashboard?.ApplyTheme();
+    }
+
+    private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category is UserPreferenceCategory.General or UserPreferenceCategory.VisualStyle)
+            BeginInvoke(ApplyTheme);
     }
 
     private static bool IsStartupEnabled()
@@ -637,6 +653,7 @@ internal sealed class MainForm : Form
     private void ExitApplication()
     {
         _allowExit = true;
+        SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         _backgroundRefreshTimer.Stop();
         _hotkeyManager.Unregister();
         if (_dashboard is not null)

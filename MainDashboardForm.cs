@@ -40,6 +40,7 @@ internal sealed class MainDashboardForm : Form
 
         BuildLayout();
         ApplyTheme();
+        HandleCreated += (_, _) => ThemeService.ApplyWindowTheme(this);
         FormClosing += (_, e) =>
         {
             e.Cancel = true;
@@ -172,13 +173,14 @@ internal sealed class MainDashboardForm : Form
             ForeColor = primary ? Color.White : Color.FromArgb(42, 51, 64),
             Cursor = Cursors.Hand
         };
-        button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.BorderSize = 1;
         return button;
     }
 
     public void ApplyTheme()
     {
         AppTheme theme = ThemeService.Current;
+        ThemeService.ApplyWindowTheme(this);
         BackColor = theme.Window;
         _header.BackColor = theme.IsDark ? theme.PanelAlt : Color.FromArgb(28, 39, 56);
         _title.ForeColor = Color.White;
@@ -192,8 +194,11 @@ internal sealed class MainDashboardForm : Form
         foreach (Button button in _buttons)
         {
             bool primary = button.Text == "设为主用";
-            button.BackColor = primary ? Color.FromArgb(38, 99, 235) : theme.Button;
-            button.ForeColor = primary ? Color.White : theme.ButtonText;
+            button.BackColor = primary ? theme.Primary : theme.Button;
+            button.ForeColor = primary ? theme.PrimaryText : theme.ButtonText;
+            button.FlatAppearance.BorderColor = primary ? theme.PrimaryBorder : theme.ButtonBorder;
+            button.FlatAppearance.MouseOverBackColor = primary ? theme.PrimaryHover : theme.ButtonHover;
+            button.FlatAppearance.MouseDownBackColor = primary ? theme.PrimaryHover : theme.ButtonHover;
         }
 
         _grid.BackgroundColor = theme.Grid;

@@ -67,7 +67,11 @@ internal sealed class MainForm : Form
             if (!_busy) Hide();
         };
         FormClosing += OnFormClosing;
-        HandleCreated += (_, _) => RegisterHotkeys(showError: true);
+        HandleCreated += (_, _) =>
+        {
+            ThemeService.ApplyWindowTheme(this, useTransientBackdrop: true);
+            RegisterHotkeys(showError: true);
+        };
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
         _backgroundRefreshTimer.Interval = 5 * 60_000;
@@ -119,7 +123,7 @@ internal sealed class MainForm : Form
             Cursor = Cursors.Hand
         };
         _restoreButton = restore;
-        restore.FlatAppearance.BorderSize = 0;
+        restore.FlatAppearance.BorderSize = 1;
         restore.Click += async (_, _) => await RestoreAllAsync();
         _progress.Dock = DockStyle.Bottom;
         _progress.Height = 3;
@@ -275,7 +279,9 @@ internal sealed class MainForm : Form
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             using var path = RoundedRectangle(card.ClientRectangle, 8);
             using var brush = new SolidBrush(card.BackColor);
+            using var pen = new Pen(adapter.HasDefaultRoute ? theme.PrimaryBorder : theme.CardBorder);
             e.Graphics.FillPath(brush, path);
+            e.Graphics.DrawPath(pen, path);
         };
 
         var icon = new Label
@@ -343,7 +349,24 @@ internal sealed class MainForm : Form
 
         card.Controls.AddRange([icon, name, details, gateway, metric, speed, active]);
         if (connected)
+        {
+            AttachHover(
+                card,
+                () =>
+                {
+                    card.BackColor = adapter.HasDefaultRoute ? theme.PrimaryHover : theme.CardHover;
+                    card.Invalidate();
+                },
+                () =>
+                {
+                    if (!card.ClientRectangle.Contains(card.PointToClient(Cursor.Position)))
+                    {
+                        card.BackColor = adapter.HasDefaultRoute ? theme.Primary : theme.Card;
+                        card.Invalidate();
+                    }
+                });
             AttachClick(card, async () => await SetPreferredAsync(adapter));
+        }
         return card;
     }
 
@@ -368,6 +391,14 @@ internal sealed class MainForm : Form
             child.Cursor = Cursors.Hand;
             child.Click += async (_, _) => await action();
         }
+    }
+
+    private static void AttachHover(Control control, Action enter, Action leave)
+    {
+        control.MouseEnter += (_, _) => enter();
+        control.MouseLeave += (_, _) => leave();
+        foreach (Control child in control.Controls)
+            AttachHover(child, enter, leave);
     }
 
     private async Task SetPreferredAsync(NetworkAdapterInfo adapter)
@@ -463,7 +494,10 @@ internal sealed class MainForm : Form
             Font = new Font("Segoe UI Symbol", 13F),
             Cursor = Cursors.Hand
         };
-        button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.BorderSize = 1;
+        button.FlatAppearance.BorderColor = theme.ButtonBorder;
+        button.FlatAppearance.MouseOverBackColor = theme.ButtonHover;
+        button.FlatAppearance.MouseDownBackColor = theme.ButtonHover;
         return button;
     }
 
@@ -471,6 +505,7 @@ internal sealed class MainForm : Form
     {
         AppTheme theme = ThemeService.Current;
         BackColor = theme.Window;
+        ThemeService.ApplyWindowTheme(this, useTransientBackdrop: true);
         _popupBorder.BackColor = theme.Border;
         _popupContent.BackColor = theme.Panel;
         _popupHeader.BackColor = theme.Panel;
@@ -483,11 +518,15 @@ internal sealed class MainForm : Form
         {
             _refreshButton.BackColor = theme.Button;
             _refreshButton.ForeColor = theme.ButtonText;
+            _refreshButton.FlatAppearance.BorderColor = theme.ButtonBorder;
+            _refreshButton.FlatAppearance.MouseOverBackColor = theme.ButtonHover;
         }
         if (_restoreButton is not null)
         {
             _restoreButton.BackColor = theme.Button;
             _restoreButton.ForeColor = theme.ButtonText;
+            _restoreButton.FlatAppearance.BorderColor = theme.ButtonBorder;
+            _restoreButton.FlatAppearance.MouseOverBackColor = theme.ButtonHover;
         }
         RenderAdapters(_cachedAdapters);
         _dashboard?.ApplyTheme();
@@ -495,7 +534,9 @@ internal sealed class MainForm : Form
 
     private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
     {
-        if (e.Category is UserPreferenceCategory.General or UserPreferenceCategory.VisualStyle)
+        if (e.Category is UserPreferenceCategory.General
+            or UserPreferenceCategory.VisualStyle
+            or UserPreferenceCategory.Color)
             BeginInvoke(ApplyTheme);
     }
 
@@ -666,8 +707,11 @@ internal sealed class MainForm : Form
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        using var path = RoundedRectangle(ClientRectangle, 10);
-        Region = new Region(path);
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+        {
+            using var path = RoundedRectangle(ClientRectangle, 10);
+            Region = new Region(path);
+        }
     }
 
     protected override void WndProc(ref Message m)
